@@ -1,18 +1,22 @@
 # Home Lab
 
-This repository captures the scripts I have created to configure my home lab.
+This repository contains scripts and configuration files for setting up and managing my home lab environment.
 
-Note: I have leverage  copilot to generate some of these scripts.
+## Overview
 
-My home setup is behind a basic Orbi router and I have a Intel Xeon Nuc that I am using to create VMs to test various scenarios.   I tend to treat the VM's like cattle and tear them down frequently as I test.
+My home lab is built behind a basic Orbi router and runs on an Intel Xeon NUC. I use virtual machines (VMs) for testing various scenarios, frequently creating and destroying them as needed.
 
-| Script | Description |
-|--- | ---- |
-| avahi-daemon-setup.sh | I install avahi-daemon on my unbuntu instances to support local DNS resolution.  This script has the settings I need to get i working |
+Some scripts in this repository were generated with the help of GitHub Copilot.
 
+## Scripts
 
-Helper command to convert windows line endings to linux
+| Script                   | Description                                                                                   |
+|--------------------------|-----------------------------------------------------------------------------------------------|
+| `avahi-daemon-setup.sh`  | Installs and configures `avahi-daemon` on Ubuntu instances to support local DNS resolution.   |
+
+## Useful Commands
+
+Convert Windows line endings to Linux format:
 
 ```bash
-sed -i 's/\r$//' your-script.sh
-```
+sed -i 's/\r$//'
