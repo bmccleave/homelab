@@ -42,6 +42,20 @@ localityName           = optional
 organizationName       = optional
 organizationalUnitName = optional
 emailAddress           = optional
+
+[ req ]
+distinguished_name = req_distinguished_name
+req_extensions = v3_req
+
+[ req_distinguished_name ]
+commonName = Common Name (e.g. server FQDN or YOUR name)
+commonName_max = 64
+
+[ v3_req ]
+subjectAltName = @alt_names
+
+[ alt_names ]
+DNS.1 = $CN
 EOF
 
 # Generate CA private key and root certificate if not exists
@@ -55,13 +69,13 @@ if [ ! -f "$CA_DIR/private/ca.key.pem" ]; then
     -out $CA_DIR/certs/ca.cert.pem -subj "/CN=MyHomeLab Root CA"
 fi
 
-# Generate key and CSR for service
 echo "Generating certificate for $CN"
 openssl genrsa -out $CN.key.pem 2048
-openssl req -new -key $CN.key.pem -out $CN.csr.pem -subj "/CN=$CN"
+openssl req -new -key $CN.key.pem -out $CN.csr.pem -subj "/CN=$CN" \
+    -config $CA_DIR/openssl.cnf -reqexts v3_req
 
-# Sign the certificate
-openssl ca -config $CA_DIR/openssl.cnf -in $CN.csr.pem -out $CN.cert.pem -batch -notext
+openssl ca -config $CA_DIR/openssl.cnf -in $CN.csr.pem -out $CN.cert.pem -batch -notext \
+    -extensions v3_req
 
 echo
 echo "Certificate created:"
