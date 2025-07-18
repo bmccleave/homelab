@@ -9,5 +9,11 @@ RUN apt-get update && \
     docker.io \
     iputils-ping \
     vim \
-    git && \
+    git \
+    unzip && \
     apt-get clean
+
+# Install Packer
+RUN curl -fsSL https://releases.hashicorp.com/packer/1.10.3/packer_1.10.3_linux_amd64.zip -o /tmp/packer.zip \
+    && unzip /tmp/packer.zip -d /usr/local/bin \
+    && rm /tmp/packer.zip

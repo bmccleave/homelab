@@ -1,5 +1,5 @@
 {
-  "name": "Bash & PowerShell DevContainer with Docker",
+  "name": "Bash & PowerShell DevContainer with Docker & Packer",
   "build": {
     "dockerfile": "Dockerfile"
   },
