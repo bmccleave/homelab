@@ -1,0 +1,17 @@
+apiVersion: k0sctl.k0sproject.io/v1beta1
+kind: Cluster
+metadata:
+  name: my-k0s-cluster
+spec:
+  hosts:
+    - role: controller
+      address: 192.168.1.10
+      user: root
+      ssh:
+        keyPath: ~/.ssh/id_rsa
+    - role: controller
+      address: 192.168.1.11
+      user: root
+      ssh:
+        keyPath: ~/.ssh/id_rsa
+  

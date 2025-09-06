@@ -1,0 +1,5 @@
+---
+k0s_version: "v1.28.2+k0s.0"
+k0s_binary_path: "/usr/local/bin/k0s"
+k0s_config_dir: "/etc/k0s"
+k0s_data_dir: "/var/lib/k0s"

@@ -1,0 +1,4 @@
+proxmox_api_url = "https://192.168.1.184:8006/api2/json"
+proxmox_node = "proxmox"
+template_name = "ubuntu-24.04-template"
+ssh_public_key = "ecdsa-sha2-nistp256 AAAAE2VjZHNhLXNoYTItbmlzdHAyNTYAAAAIbmlzdHAyNTYAAABBBLrK1KGAK2jDDttr4W1RCnAQ2FJMEB3Xv2oW2PjoTg44VAXNljKZZiE8558G4eiwdrilL04Ed7YIPng22Hu+YIw= bruce@nuc-mac"

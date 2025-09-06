@@ -1,0 +1,1 @@
+[Proxmox cloud-init support](https://pve.proxmox.com/wiki/Cloud-Init_Support)

@@ -1,0 +1,16 @@
+**/secrets.auto.tfvars
+**/.terraform
+
+# Exclude secrets file
+**/secrets.pkrvars.hcl
+
+# Packer cache directories
+**/packer_cache/
+**/output-*/
+
+*.auto.tfvars
+.terraform/
+*.tfstate
+*.tfstate.*
+.terraform.lock.hcl
+.terraform

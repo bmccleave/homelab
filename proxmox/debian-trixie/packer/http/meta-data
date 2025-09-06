@@ -1,0 +1,2 @@
+instance-id: debian-server-trixie
+local-hostname: debian-template

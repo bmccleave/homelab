@@ -1,0 +1,56 @@
+---
+- name: Download k0s binary
+  get_url:
+    url: "https://github.com/k0sproject/k0s/releases/download/{{ k0s_version }}/k0s-{{ k0s_version }}-amd64"
+    dest: "{{ k0s_binary_path }}"
+    mode: '0755'
+  become: true
+
+- name: Create k0s directories
+  file:
+    path: "{{ item }}"
+    state: directory
+    mode: '0755'
+  with_items:
+    - "{{ k0s_config_dir }}"
+    - "{{ k0s_data_dir }}"
+  become: true
+
+- name: Generate k0s configuration
+  command: "{{ k0s_binary_path }} default-config > {{ k0s_config_dir }}/k0s.yaml"
+  when: inventory_hostname == groups['k0s_controllers'][0]
+  become: true
+
+- name: Install k0s controller with worker
+  command: "{{ k0s_binary_path }} install controller --enable-worker"
+  become: true
+
+- name: Start k0s on first node
+  command: "{{ k0s_binary_path }} start"
+  when: inventory_hostname == groups['k0s_controllers'][0]
+  become: true
+
+- name: Get join token for additional controllers
+  command: "{{ k0s_binary_path }} token create --role=controller --expiry=0"
+  register: controller_token
+  when: inventory_hostname == groups['k0s_controllers'][0]
+  become: true
+
+- name: Set controller token fact
+  set_fact:
+    k0s_controller_token: "{{ controller_token.stdout }}"
+  when: inventory_hostname == groups['k0s_controllers'][0]
+
+- name: Join additional controllers
+  command: "{{ k0s_binary_path }} install controller --enable-worker --token={{ hostvars[groups['k0s_controllers'][0]]['k0s_controller_token'] }}"
+  when:
+    - inventory_hostname in groups['k0s_controllers']
+    - inventory_hostname != groups['k0s_controllers'][0]
+  become: true
+
+- name: Start k0s on additional nodes
+  command: "{{ k0s_binary_path }} start"
+  when:
+    - inventory_hostname in groups['k0s_controllers']
+    - inventory_hostname != groups['k0s_controllers'][0]
+  become: true

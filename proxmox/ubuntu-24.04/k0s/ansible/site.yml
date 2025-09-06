@@ -1,0 +1,5 @@
+---
+- hosts: k0s
+  become: true
+  roles:
+    - k0s
