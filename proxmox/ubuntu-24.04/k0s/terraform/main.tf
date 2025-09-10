@@ -60,7 +60,10 @@ resource "proxmox_vm_qemu" "k0s_node" {
   cipassword    = var.vm_password
   searchdomain  = "local"
   nameserver    = "192.168.1.1"  # Update this to your router/DNS server IP
-  sshkeys       = var.ssh_public_key
+  sshkeys       = [
+    var.ssh_public_key,
+    var.ssh_public_key2
+  ]
   ipconfig0     = "ip=${each.value.ip}/24,gw=192.168.1.1"  # Update gateway to match your network
 
   # Install QEMU Guest Agent

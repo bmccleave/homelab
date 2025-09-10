@@ -1,4 +1,21 @@
 ---
+- name: Stop k0s service if running
+  shell: |
+    systemctl stop k0scontroller || true
+  become: true
+  ignore_errors: true
+
+- name: Remove k0s controller service if exists
+  file:
+    path: /etc/systemd/system/k0scontroller.service
+    state: absent
+  become: true
+
+- name: Reset k0s state
+  command: "{{ k0s_binary_path }} reset"
+  become: true
+  ignore_errors: true
+
 - name: Download k0s binary
   get_url:
     url: "https://github.com/k0sproject/k0s/releases/download/{{ k0s_version }}/k0s-{{ k0s_version }}-amd64"
@@ -30,6 +47,20 @@
   when: inventory_hostname == groups['k0s_controllers'][0]
   become: true
 
+- name: Wait for k0scontroller to be ready
+  shell: |
+    for i in {1..30}; do
+      {{ k0s_binary_path }} status && exit 0
+      sleep 5
+    done
+    exit 1
+  when: inventory_hostname == groups['k0s_controllers'][0]
+  register: k0s_status
+  retries: 30
+  delay: 5
+  changed_when: false
+  become: true
+
 - name: Get join token for additional controllers
   command: "{{ k0s_binary_path }} token create --role=controller --expiry=0"
   register: controller_token
@@ -41,8 +72,17 @@
     k0s_controller_token: "{{ controller_token.stdout }}"
   when: inventory_hostname == groups['k0s_controllers'][0]
 
+- name: Write controller join token to file
+  copy:
+    content: "{{ hostvars[groups['k0s_controllers'][0]]['k0s_controller_token'] }}"
+    dest: /tmp/k0s_controller_token
+  when:
+    - inventory_hostname in groups['k0s_controllers']
+    - inventory_hostname != groups['k0s_controllers'][0]
+  become: true
+
 - name: Join additional controllers
-  command: "{{ k0s_binary_path }} install controller --enable-worker --token={{ hostvars[groups['k0s_controllers'][0]]['k0s_controller_token'] }}"
+  command: "{{ k0s_binary_path }} install controller --enable-worker --token-file /tmp/k0s_controller_token --config {{ k0s_config_dir }}/k0s.yaml"
   when:
     - inventory_hostname in groups['k0s_controllers']
     - inventory_hostname != groups['k0s_controllers'][0]
@@ -50,6 +90,22 @@
 
 - name: Start k0s on additional nodes
   command: "{{ k0s_binary_path }} start"
+  when:
+    - inventory_hostname in groups['k0s_controllers']
+    - inventory_hostname != groups['k0s_controllers'][0]
+  become: true
+
+- name: Copy k0s config from first controller
+  fetch:
+    src: "{{ k0s_config_dir }}/k0s.yaml"
+    dest: "/tmp/k0s.yaml"
+    flat: yes
+  when: inventory_hostname == groups['k0s_controllers'][0]
+
+- name: Distribute k0s config to joining controllers
+  copy:
+    src: "/tmp/k0s.yaml"
+    dest: "{{ k0s_config_dir }}/k0s.yaml"
   when:
     - inventory_hostname in groups['k0s_controllers']
     - inventory_hostname != groups['k0s_controllers'][0]

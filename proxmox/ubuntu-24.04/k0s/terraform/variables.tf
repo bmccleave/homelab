@@ -42,3 +42,7 @@ variable "ssh_public_key" {
   type = string
   description = "SSH public key for VM access"
 }
+variable "ssh_public_key2" {
+  type = string
+  description = "SSH public key for VM access"
+}
