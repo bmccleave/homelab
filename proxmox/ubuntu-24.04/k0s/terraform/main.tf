@@ -1,8 +1,16 @@
 locals {
   nodes = {
-    "ubuntu-k0s-node1" = { vmid = 201, ip = "192.168.1.201" }
-    "ubuntu-k0s-node2" = { vmid = 202, ip = "192.168.1.202" }
-    "ubuntu-k0s-node3" = { vmid = 203, ip = "192.168.1.203" }
+    "k0s-node1" = { vmid = 201, ip = "192.168.1.201" }
+    "k0s-node2" = { vmid = 202, ip = "192.168.1.202" }
+    "k0s-node3" = { vmid = 203, ip = "192.168.1.203" }
+
+    "k3s-node1" = { vmid = 211, ip = "192.168.1.211" }
+    "k3s-node2" = { vmid = 212, ip = "192.168.1.212" }
+    "k3s-node3" = { vmid = 213, ip = "192.168.1.213" }
+
+    "swarm-node1" = { vmid = 221, ip = "192.168.1.221" }
+    "swarm-node2" = { vmid = 222, ip = "192.168.1.222" }
+    "swarm-node3" = { vmid = 223, ip = "192.168.1.223" }
   }
 }
 
