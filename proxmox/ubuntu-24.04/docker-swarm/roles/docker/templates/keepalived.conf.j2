@@ -1,3 +1,5 @@
+! Configuration File for keepalived
+
 vrrp_script chk_docker {
     script "pidof dockerd"
     interval 2
@@ -6,9 +8,9 @@ vrrp_script chk_docker {
 
 vrrp_instance VI_1 {
     state BACKUP
-    interface eth0
+    interface {{ ansible_default_ipv4.interface }}
     virtual_router_id {{ virtual_router_id }}
-    priority {{ 110 if inventory_hostname == groups['docker_managers'][0] else 100 }}
+    priority 100
     advert_int 1
     authentication {
         auth_type PASS

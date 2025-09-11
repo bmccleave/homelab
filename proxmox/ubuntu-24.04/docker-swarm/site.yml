@@ -4,6 +4,3 @@
   become: true
   roles:
     - docker
-    - swarm
-    - keepalived
-    - portainer

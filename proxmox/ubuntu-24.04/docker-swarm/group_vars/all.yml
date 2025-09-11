@@ -1,5 +1,5 @@
 ---
-docker_apt_repo: "deb [arch=amd64 signed-by=/etc/apt/keyrings/docker.gpg] https://download.docker.com/linux/ubuntu {{ ansible_distribution_release | lower }} stable"
+docker_apt_repo: "deb [arch=amd64 signed-by=/etc/apt/keyrings/docker.gpg] https://download.docker.com/linux/ubuntu mantic stable"
 docker_gpg_url: "https://download.docker.com/linux/ubuntu/gpg"
 portainer_data: "/opt/portainer"
 vip_address: "192.168.1.224"

@@ -9,16 +9,28 @@
     state: present
     update_cache: yes
 
-- name: Add Docker GPG key
-  ansible.builtin.apt_key:
-    url: "{{ docker_gpg_url }}"
-    state: present
+- name: Ensure /etc/apt/keyrings exists
+  file:
+    path: /etc/apt/keyrings
+    state: directory
+    mode: '0755'
+
+- name: Download Docker GPG key as docker.asc
+  get_url:
+    url: "https://download.docker.com/linux/ubuntu/gpg"
+    dest: /etc/apt/keyrings/docker.asc
+    mode: '0644'
+    force: yes
 
 - name: Add Docker apt repository
   apt_repository:
-    repo: "{{ docker_apt_repo }}"
+    repo: "deb [arch=amd64 signed-by=/etc/apt/keyrings/docker.asc] https://download.docker.com/linux/ubuntu mantic stable"
     state: present
     filename: docker
+
+- name: Update apt cache
+  apt:
+    update_cache: yes
 
 - name: Install Docker packages
   apt:
@@ -39,10 +51,11 @@
 
 - name: Add current user to docker group
   user:
-    name: "{{ ansible_user }}"
+    name: "{{ ansible_ssh_user }}"
     groups: docker
     append: yes
 
+# Swarm init and join logic
 - name: Initialize Docker Swarm on first manager
   shell: |
     docker swarm init --advertise-addr {{ ansible_host }}
@@ -58,33 +71,36 @@
   when: inventory_hostname == groups['docker_managers'][0]
   changed_when: false
 
-- name: Set join token fact
+- name: Set join token fact (global)
   set_fact:
     swarm_manager_token: "{{ manager_token.stdout }}"
   when: inventory_hostname == groups['docker_managers'][0]
+  delegate_to: localhost
+  run_once: true
 
-- name: Wait for swarm to be initialized
+- name: Wait for join token to be available
   wait_for:
-    path: /tmp/swarm_initialized
-    state: present
-    timeout: 60
+    timeout: 30
   when: inventory_hostname != groups['docker_managers'][0]
 
 - name: Join other managers to the swarm
   shell: |
-    docker swarm join --token {{ hostvars[groups['docker_managers'][0]].swarm_manager_token }} {{ groups['docker_managers'][0] }}:2377
+    docker swarm join --token {{ hostvars[groups['docker_managers'][0]].swarm_manager_token | default(swarm_manager_token) }} {{ groups['docker_managers'][0] }}:2377
   when: inventory_hostname != groups['docker_managers'][0]
   args:
     creates: /tmp/swarm_initialized
+  register: swarm_join
+  failed_when: "'This node is already part of a swarm' not in swarm_join.stdout and swarm_join.rc != 0"
 
 - name: Mark node as joined
   file:
     path: /tmp/swarm_initialized
     state: touch
 
+# Node labeling (fix node ID logic)
 - name: Add node label for worker group
   shell: |
-    docker node update --label-add worker.group={{ node_labels[inventory_hostname] }} $(docker node ls --format '{{ "{{.Self}}" }}' | grep true | awk '{print $1}')
+    docker node update --label-add worker.group={{ node_labels[inventory_hostname] }} $(docker node ls --filter "name=$(hostname)" --format "{{'{{.ID}}'}}")
   environment:
     DOCKER_HOST: "unix:///var/run/docker.sock"
   when: inventory_hostname in node_labels
