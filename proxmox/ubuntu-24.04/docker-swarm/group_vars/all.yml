@@ -1,0 +1,11 @@
+---
+docker_apt_repo: "deb [arch=amd64 signed-by=/etc/apt/keyrings/docker.gpg] https://download.docker.com/linux/ubuntu {{ ansible_distribution_release | lower }} stable"
+docker_gpg_url: "https://download.docker.com/linux/ubuntu/gpg"
+portainer_data: "/opt/portainer"
+vip_address: "192.168.1.224"
+virtual_router_id: 51
+auth_pass: "keepalivedpass"
+node_labels:
+  "192.168.1.221": "primary"
+  "192.168.1.222": "secondary"
+  "192.168.1.223": "tertiary"

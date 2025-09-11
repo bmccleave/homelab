@@ -1,0 +1,139 @@
+---
+- name: Install prerequisites
+  apt:
+    name:
+      - ca-certificates
+      - curl
+      - gnupg
+      - lsb-release
+    state: present
+    update_cache: yes
+
+- name: Add Docker GPG key
+  ansible.builtin.apt_key:
+    url: "{{ docker_gpg_url }}"
+    state: present
+
+- name: Add Docker apt repository
+  apt_repository:
+    repo: "{{ docker_apt_repo }}"
+    state: present
+    filename: docker
+
+- name: Install Docker packages
+  apt:
+    name:
+      - docker-ce
+      - docker-ce-cli
+      - containerd.io
+      - docker-buildx-plugin
+      - docker-compose-plugin
+    state: present
+    update_cache: yes
+
+- name: Ensure docker service is running
+  service:
+    name: docker
+    state: started
+    enabled: true
+
+- name: Add current user to docker group
+  user:
+    name: "{{ ansible_user }}"
+    groups: docker
+    append: yes
+
+- name: Initialize Docker Swarm on first manager
+  shell: |
+    docker swarm init --advertise-addr {{ ansible_host }}
+  args:
+    creates: /tmp/swarm_initialized
+  when: inventory_hostname == groups['docker_managers'][0]
+  register: swarm_init
+  changed_when: "'Swarm initialized' in swarm_init.stdout or 'This node is already part of a swarm' in swarm_init.stdout"
+
+- name: Get join-token for managers
+  shell: docker swarm join-token manager -q
+  register: manager_token
+  when: inventory_hostname == groups['docker_managers'][0]
+  changed_when: false
+
+- name: Set join token fact
+  set_fact:
+    swarm_manager_token: "{{ manager_token.stdout }}"
+  when: inventory_hostname == groups['docker_managers'][0]
+
+- name: Wait for swarm to be initialized
+  wait_for:
+    path: /tmp/swarm_initialized
+    state: present
+    timeout: 60
+  when: inventory_hostname != groups['docker_managers'][0]
+
+- name: Join other managers to the swarm
+  shell: |
+    docker swarm join --token {{ hostvars[groups['docker_managers'][0]].swarm_manager_token }} {{ groups['docker_managers'][0] }}:2377
+  when: inventory_hostname != groups['docker_managers'][0]
+  args:
+    creates: /tmp/swarm_initialized
+
+- name: Mark node as joined
+  file:
+    path: /tmp/swarm_initialized
+    state: touch
+
+- name: Add node label for worker group
+  shell: |
+    docker node update --label-add worker.group={{ node_labels[inventory_hostname] }} $(docker node ls --format '{{ "{{.Self}}" }}' | grep true | awk '{print $1}')
+  environment:
+    DOCKER_HOST: "unix:///var/run/docker.sock"
+  when: inventory_hostname in node_labels
+
+- name: Install keepalived
+  apt:
+    name: keepalived
+    state: present
+    update_cache: yes
+
+- name: Configure keepalived
+  template:
+    src: keepalived.conf.j2
+    dest: /etc/keepalived/keepalived.conf
+  notify: Restart keepalived
+
+- name: Ensure keepalived is running
+  service:
+    name: keepalived
+    state: started
+    enabled: true
+
+- name: Create Portainer data volume
+  shell: docker volume create portainer_data
+  args:
+    creates: /var/lib/docker/volumes/portainer_data
+
+- name: Deploy Portainer service (only on first manager)
+  shell: |
+    docker service create \
+      --name portainer \
+      --publish 9000:9000 \
+      --replicas=1 \
+      --constraint 'node.role==manager' \
+      --mount type=volume,source=portainer_data,target=/data \
+      --mount type=bind,src=/var/run/docker.sock,dst=/var/run/docker.sock \
+      portainer/portainer-ce
+  when: inventory_hostname == groups['docker_managers'][0]
+  args:
+    creates: /tmp/portainer_deployed
+
+- name: Mark Portainer as deployed
+  file:
+    path: /tmp/portainer_deployed
+    state: touch
+  when: inventory_hostname == groups['docker_managers'][0]
+
+# Handlers
+- name: Restart keepalived
+  service:
+    name: keepalived
+    state: restarted

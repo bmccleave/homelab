@@ -1,0 +1,9 @@
+---
+- name: Docker Swarm Cluster Setup
+  hosts: docker_managers
+  become: true
+  roles:
+    - docker
+    - swarm
+    - keepalived
+    - portainer
