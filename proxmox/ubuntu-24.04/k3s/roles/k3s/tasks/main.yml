@@ -1,0 +1,52 @@
+---
+- name: Download k3s install script
+  get_url:
+    url: https://get.k3s.io
+    dest: /tmp/k3s_install.sh
+    mode: '0755'
+
+- name: Install k3s on first node (initialize cluster)
+  shell: |
+    INSTALL_K3S_VERSION={{ k3s_version }} \
+    K3S_TOKEN={{ k3s_token }} \
+    sh /tmp/k3s_install.sh server --cluster-init --tls-san {{ groups['k3s_cluster'][0] }}
+  when: inventory_hostname == groups['k3s_cluster'][0]
+  args:
+    creates: /usr/local/bin/k3s
+
+- name: Wait for k3s API to be available on first node
+  uri:
+    url: "https://{{ groups['k3s_cluster'][0] }}:6443/healthz"
+    method: GET
+    validate_certs: no
+  register: result
+  until: result.status in [200, 401]
+  retries: 30
+  delay: 5
+  when: inventory_hostname != groups['k3s_cluster'][0]
+  delegate_to: "{{ groups['k3s_cluster'][0] }}"
+  failed_when: result.status not in [200, 401]
+
+- name: Install k3s on additional nodes (join cluster)
+  shell: |
+    INSTALL_K3S_VERSION={{ k3s_version }} \
+    K3S_TOKEN={{ k3s_token }} \
+    K3S_URL=https://{{ groups['k3s_cluster'][0] }}:6443 \
+    sh /tmp/k3s_install.sh server --server https://{{ groups['k3s_cluster'][0] }}:6443 --tls-san {{ groups['k3s_cluster'][0] }}
+  when: inventory_hostname != groups['k3s_cluster'][0]
+  args:
+    creates: /usr/local/bin/k3s
+
+- name: Wait for k3s to be ready
+  shell: |
+    for i in {1..30}; do
+      k3s kubectl get nodes && exit 0
+      sleep 5
+    done
+    exit 1
+  when: inventory_hostname == groups['k3s_cluster'][0]
+  register: k3s_ready
+  retries: 30
+  delay: 5
+  changed_when: false
+  ignore_errors: true

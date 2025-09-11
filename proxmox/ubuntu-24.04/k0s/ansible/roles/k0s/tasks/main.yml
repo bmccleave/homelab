@@ -95,12 +95,13 @@
     - inventory_hostname != groups['k0s_controllers'][0]
   become: true
 
-- name: Copy k0s config from first controller
+- name: Fetch k0s config from first controller
   fetch:
     src: "{{ k0s_config_dir }}/k0s.yaml"
     dest: "/tmp/k0s.yaml"
     flat: yes
-  when: inventory_hostname == groups['k0s_controllers'][0]
+  delegate_to: "{{ groups['k0s_controllers'][0] }}"
+  run_once: true
 
 - name: Distribute k0s config to joining controllers
   copy:
@@ -110,3 +111,15 @@
     - inventory_hostname in groups['k0s_controllers']
     - inventory_hostname != groups['k0s_controllers'][0]
   become: true
+
+- name: Wait for k3s API to be available on first node
+  uri:
+    url: "https://{{ groups['k3s_cluster'][0] }}:6443/healthz"
+    method: GET
+    validate_certs: no
+  register: result
+  until: result.status == 200
+  retries: 30
+  delay: 5
+  when: inventory_hostname != groups['k3s_cluster'][0]
+  delegate_to: "{{ groups['k3s_cluster'][0] }}"
