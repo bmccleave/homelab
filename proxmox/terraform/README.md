@@ -11,12 +11,11 @@ This directory contains Terraform scripts for provisioning virtual machines on P
 
 ## What This Example Does
 
-This Terraform configuration provisions 12 virtual machines across three different Kubernetes distributions:
+This Terraform configuration provisions 9 virtual machines across three clusters:
 
-- 3 VMs for k0s cluster (IDs: 201-203, IPs: 10.0.0.201-203)
-- 3 VMs for k3s cluster (IDs: 211-213, IPs: 10.0.0.211-213)
-- 3 VMs for Docker Swarm cluster (IDs: 221-223, IPs: 10.0.0.221-223)
-- 3 VMs for generic cluster (IDs: 231-233, IPs: 10.0.0.231-233)
+- 3 VMs for cl1 cluster (IDs: 201-203, IPs: 10.0.0.201-203)
+- 3 VMs for cl2 cluster (IDs: 211-213, IPs: 10.0.0.211-213)
+- 3 VMs for cl3 cluster (IDs: 221-223, IPs: 10.0.0.221-223)
 
 Each VM is automatically configured with:
 
@@ -62,6 +61,48 @@ Before using these scripts, ensure you have:
    terraform plan
    terraform apply
    ```
+
+## Destroying VMs
+
+To remove all VMs created by Terraform:
+
+### Remove All VMs
+
+```bash
+terraform destroy
+```
+
+This will show you what will be destroyed and prompt for confirmation.
+
+### Remove All VMs (No Confirmation)
+
+For automation or scripts:
+
+```bash
+terraform destroy -auto-approve
+```
+
+### Remove Specific VMs
+
+To delete only certain VMs:
+
+```bash
+# Delete a single VM
+terraform destroy -target=proxmox_vm_qemu.k0s_node[\"cl3-node3\"]
+
+# Delete multiple VMs
+terraform destroy -target=proxmox_vm_qemu.k0s_node[\"cl3-node1\"] -target=proxmox_vm_qemu.k0s_node[\"cl3-node2\"]
+```
+
+### Remove Snapshots Only
+
+To remove just the snapshots without destroying VMs:
+
+```bash
+terraform destroy -target=null_resource.vm_snapshot
+```
+
+**Note**: Destroying VMs is permanent and cannot be undone. Always verify the destruction plan before confirming.
 
 ## Configuration Files
 

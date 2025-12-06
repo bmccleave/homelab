@@ -1,5 +1,10 @@
 .terraform/
 .terraform.lock.hcl
+.terraform.tfstate
+.terraform.lock.tfstate.backup
+.terraform.tfstate.lock.info
+terraform.tfstate
+terraform.tfstate.backup
 secrets.auto.tfvars
 nodes.auto.tfvars
 
