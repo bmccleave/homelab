@@ -1,3 +1,58 @@
+locals {
+  is_windows = substr(pathexpand("~"), 0, 1) == "/" ? false : true
+  
+  # Windows PowerShell snapshot commands
+  snapshot_command_windows = <<-EOT
+    # Disable certificate validation for Windows PowerShell 5.1
+    add-type @"
+        using System.Net;
+        using System.Security.Cryptography.X509Certificates;
+        public class TrustAllCertsPolicy : ICertificatePolicy {
+            public bool CheckValidationResult(
+                ServicePoint srvPoint, X509Certificate certificate,
+                WebRequest request, int certificateProblem) {
+                return true;
+            }
+        }
+"@
+    [System.Net.ServicePointManager]::CertificatePolicy = New-Object TrustAllCertsPolicy
+    [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
+    
+    $headers = @{
+      'Authorization' = 'PVEAPIToken=${var.proxmox_api_token_id}=${var.proxmox_api_token_secret}'
+      'Content-Type' = 'application/json'
+    }
+    
+    # Shutdown VM
+    Invoke-WebRequest -Uri '${var.proxmox_api_url}/nodes/${var.proxmox_node}/qemu/VMID_PLACEHOLDER/status/shutdown' -Method POST -Headers $headers -Body '{}' | Out-Null
+    Start-Sleep -Seconds 30
+    
+    # Create snapshot
+    $snapBody = @{
+      snapname = 'clean'
+      description = 'Clean state after initial setup with SSH keys'
+    } | ConvertTo-Json
+    Invoke-WebRequest -Uri '${var.proxmox_api_url}/nodes/${var.proxmox_node}/qemu/VMID_PLACEHOLDER/snapshot' -Method POST -Headers $headers -Body $snapBody | Out-Null
+    
+    # Start VM
+    Invoke-WebRequest -Uri '${var.proxmox_api_url}/nodes/${var.proxmox_node}/qemu/VMID_PLACEHOLDER/status/start' -Method POST -Headers $headers -Body '{}' | Out-Null
+  EOT
+  
+  # Linux/macOS curl snapshot commands
+  snapshot_command_unix = <<-EOT
+    curl -k -X POST '${var.proxmox_api_url}/nodes/${var.proxmox_node}/qemu/VMID_PLACEHOLDER/status/shutdown' \
+      -H 'Authorization: PVEAPIToken=${var.proxmox_api_token_id}=${var.proxmox_api_token_secret}' \
+      -H 'Content-Type: application/json'
+    sleep 30
+    curl -k -X POST '${var.proxmox_api_url}/nodes/${var.proxmox_node}/qemu/VMID_PLACEHOLDER/snapshot' \
+      -H 'Authorization: PVEAPIToken=${var.proxmox_api_token_id}=${var.proxmox_api_token_secret}' \
+      -H 'Content-Type: application/json' \
+      -d '{"snapname":"clean","description":"Clean state after initial setup with SSH keys"}'
+    curl -k -X POST '${var.proxmox_api_url}/nodes/${var.proxmox_node}/qemu/VMID_PLACEHOLDER/status/start' \
+      -H 'Authorization: PVEAPIToken=${var.proxmox_api_token_id}=${var.proxmox_api_token_secret}'
+  EOT
+}
+
 resource "proxmox_vm_qemu" "k0s_node" {
   for_each = var.nodes
 
@@ -25,7 +80,6 @@ resource "proxmox_vm_qemu" "k0s_node" {
     slot    = "ide0"
     type    = "cloudinit"
     storage = "local-lvm"
-    size    = "4M"
   }
 
   network {
@@ -47,9 +101,26 @@ resource "proxmox_vm_qemu" "k0s_node" {
   sshkeys = join("\n", var.ssh_public_keys)
   ipconfig0     = "ip=${each.value.ip}/24,gw=192.168.1.1"  # Update gateway to match your network
 
+  # Wait for cloud-init to complete before running provisioners
+  provisioner "remote-exec" {
+    inline = var.skip_provisioners ? ["echo 'Provisioners skipped'"] : [
+      "echo 'Waiting for cloud-init to complete...'",
+      "cloud-init status --wait || true",
+      "echo 'Cloud-init completed'"
+    ]
+    connection {
+      type        = "ssh"
+      user        = var.vm_user
+      host        = each.value.ip
+      private_key = file(var.ssh_private_key_path)
+      timeout     = "15m"
+    }
+    on_failure = continue
+  }
+
   # Install QEMU Guest Agent
   provisioner "remote-exec" {
-    inline = [
+    inline = var.skip_provisioners ? ["echo 'Provisioners skipped'"] : [
       "echo 'Installing QEMU Guest Agent...'",
       "sudo apt-get update",
       "sudo apt-get install -y qemu-guest-agent",
@@ -60,15 +131,15 @@ resource "proxmox_vm_qemu" "k0s_node" {
       type        = "ssh"
       user        = var.vm_user
       host        = each.value.ip
-      private_key = file("~/.ssh/id_rsa")  # Update this path to your private key
-      timeout     = "5m"
+      private_key = file(var.ssh_private_key_path)
+      timeout     = "15m"
     }
     on_failure = continue
   }
 
   # Install and configure avahi-daemon
   provisioner "remote-exec" {
-    inline = [
+    inline = var.skip_provisioners ? ["echo 'Provisioners skipped'"] : [
       # Install and configure avahi-daemon
       "echo 'Installing avahi-daemon...'",
       "sudo apt-get update",
@@ -93,25 +164,28 @@ resource "proxmox_vm_qemu" "k0s_node" {
       type        = "ssh"
       user        = var.vm_user
       host        = each.value.ip
-      private_key = file("~/.ssh/id_rsa")  # Update this path to your private key
-      timeout     = "5m"
+      private_key = file(var.ssh_private_key_path)
+      timeout     = "15m"
     }
+    on_failure = continue
   }
 
 }
 
 # Create "clean" snapshots after VM provisioning
+# Only create snapshots when create_snapshots = true to avoid shutting down VMs during initial provisioning
 resource "null_resource" "vm_snapshot" {
-  for_each = var.nodes
+  for_each = var.create_snapshots ? var.nodes : {}
 
   depends_on = [proxmox_vm_qemu.k0s_node]
 
   provisioner "local-exec" {
-    command = "curl -k -X POST '${var.proxmox_api_url}/api2/json/nodes/${var.proxmox_node}/qemu/${each.value.vmid}/status/shutdown' -H 'Authorization: PVEAPIToken=${var.proxmox_api_token_id}=${var.proxmox_api_token_secret}' -H 'Content-Type: application/json'; Start-Sleep -Seconds 30; curl -k -X POST '${var.proxmox_api_url}/api2/json/nodes/${var.proxmox_node}/qemu/${each.value.vmid}/snapshot' -H 'Authorization: PVEAPIToken=${var.proxmox_api_token_id}=${var.proxmox_api_token_secret}' -H 'Content-Type: application/json' -d '{\"snapname\":\"clean\",\"description\":\"Clean state after initial setup with SSH keys\"}'; curl -k -X POST '${var.proxmox_api_url}/api2/json/nodes/${var.proxmox_node}/qemu/${each.value.vmid}/status/start' -H 'Authorization: PVEAPIToken=${var.proxmox_api_token_id}=${var.proxmox_api_token_secret}'"
-    interpreter = ["pwsh", "-Command"]
+    command     = replace(local.is_windows ? local.snapshot_command_windows : local.snapshot_command_unix, "VMID_PLACEHOLDER", each.value.vmid)
+    interpreter = local.is_windows ? ["powershell.exe", "-Command"] : ["/bin/bash", "-c"]
   }
 
   triggers = {
     vm_id = proxmox_vm_qemu.k0s_node[each.key].id
+    snapshot_requested = var.create_snapshots
   }
 }

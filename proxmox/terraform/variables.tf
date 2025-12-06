@@ -1,3 +1,15 @@
+variable "skip_provisioners" {
+  type        = bool
+  description = "Skip all provisioners (useful for initial VM creation)"
+  default     = false
+}
+
+variable "create_snapshots" {
+  type        = bool
+  description = "Create clean snapshots after VM provisioning (only enable after VMs are fully configured)"
+  default     = false
+}
+
 variable "proxmox_api_url" {
   type = string
   description = "The URL of the Proxmox API"
@@ -41,6 +53,13 @@ variable "vm_password" {
 variable "ssh_public_keys" {
   type = list(string)
   description = "List of SSH public keys for VM access"
+}
+
+variable "ssh_private_key_path" {
+  type = string
+  description = "Path to SSH private key for provisioner connections"
+  sensitive = true
+  default = "~/.ssh/id_ed25519"
 }
 
 variable "nodes" {
