@@ -43,19 +43,59 @@ Before using these scripts, ensure you have:
    cd proxmox/terraform
    ```
 
-2. **Configure Variables**:
+2. **Copy Example Configuration Files**:
 
-   - Copy `secrets.auto.tfvars.example` to `secrets.auto.tfvars`
-   - Update `terraform.tfvars` with your environment details
+   ```bash
+   # Copy the example files to create your local configuration
+   cp secrets.auto.tfvars.example secrets.auto.tfvars
+   cp nodes.auto.tfvars.example nodes.auto.tfvars
+   cp terraform.tfvars.example terraform.tfvars
+   ```
+
+   **Important**: The `.example` files are templates tracked in git. Your actual configuration files (`secrets.auto.tfvars`, `nodes.auto.tfvars`, and `terraform.tfvars`) are git-ignored to protect your sensitive data.
+
+3. **Configure Variables**:
+
+   ### `secrets.auto.tfvars` Variables
+
+   | Variable | Description | Example |
+   |----------|-------------|---------|
+   | `proxmox_api_token_id` | API Token ID from Proxmox (format: user@realm!token-name) | `root@pam!terraform` |
+   | `proxmox_api_token_secret` | API Token Secret (UUID format) | `xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx` |
+   | `vm_user` | Username for VM login | `your-vm-username` |
+   | `vm_password` | Password for VM user | `your-secure-password` |
+   | `ssh_public_keys` | List of SSH public keys for VM access | `["ssh-rsa AAAA...", "ssh-ed25519 AAAA..."]` |
+   | `ssh_private_key_path` | Path to SSH private key for provisioner connections | `~/.ssh/id_ed25519` |
+
+   ### `nodes.auto.tfvars` Variables
+
+   | Variable | Description | Example |
+   |----------|-------------|---------|
+   | `nodes` | Map of VM configurations with VMID and IP address | `{"cl1-node1" = { vmid = 201, ip = "10.0.0.201" }}` |
+
+   ### `terraform.tfvars` Variables
+
+   | Variable | Description | Example |
+   |----------|-------------|---------|
+   | `proxmox_api_url` | URL of the Proxmox API endpoint | `https://10.0.0.100:8006/api2/json` |
+   | `proxmox_node` | Name of the Proxmox node to deploy VMs on | `proxmox1` |
+   | `template_name` | Name of the cloud-init template to clone | `ubuntu-24.04-template` |
+   | `skip_provisioners` | Skip SSH provisioners (useful during initial setup) | `true` or `false` |
+   | `create_snapshots` | Create clean snapshots after provisioning | `true` or `false` |
+
+   **Configuration Steps**:
+   - Edit `secrets.auto.tfvars` with your Proxmox API credentials and SSH keys
+   - Edit `nodes.auto.tfvars` with your desired VM configuration (IDs and IP addresses)
+   - Update `terraform.tfvars` with your Proxmox server details and template name
    - Replace all example values with your actual configuration
 
-3. **Update Network Settings**:
+4. **Update Network Settings**:
 
-   - Modify IP addresses in `main.tf` to match your network
-   - Update gateway and DNS server addresses
+   - Verify IP addresses in `nodes.auto.tfvars` match your network
+   - Update gateway and DNS server addresses in `terraform.tfvars` if needed
    - Ensure VM IDs don't conflict with existing VMs
 
-4. **Initialize and Apply**:
+5. **Initialize and Apply**:
    ```bash
    terraform init
    terraform plan
@@ -109,12 +149,14 @@ terraform destroy -target=null_resource.vm_snapshot
 - `main.tf`: Main VM resource definitions
 - `variables.tf`: Variable declarations
 - `providers.tf`: Terraform provider configuration
-- `terraform.tfvars`: Non-sensitive variable values
-- `secrets.auto.tfvars`: Sensitive credentials (excluded from git)
+- `terraform.tfvars`: Non-sensitive configuration (git-ignored - copy from `terraform.tfvars.example`)
+- `secrets.auto.tfvars`: Sensitive credentials (git-ignored - copy from `secrets.auto.tfvars.example`)
+- `nodes.auto.tfvars`: VM node configuration (git-ignored - copy from `nodes.auto.tfvars.example`)
 
 ## Security Best Practices
 
-- Never commit `secrets.auto.tfvars` to version control
+- Never commit `secrets.auto.tfvars`, `terraform.tfvars`, or `nodes.auto.tfvars` to version control
+- Always copy from `.example` files and customize with your own values
 - Use strong, unique passwords for VM users
 - Regularly rotate API tokens
 - Consider using Terraform Cloud for state management

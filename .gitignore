@@ -7,6 +7,7 @@ terraform.tfstate
 terraform.tfstate.backup
 secrets.auto.tfvars
 nodes.auto.tfvars
+terraform.tfvars
 
 # Packer secrets
 secrets.pkrvars.hcl
