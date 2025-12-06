@@ -20,6 +20,18 @@ variable "proxmox_password" {
   sensitive = true
 }
 
+variable "ssh_password" {
+  type      = string
+  sensitive = true
+  description = "SSH password for Ubuntu user during installation"
+}
+
+variable "user_password_hash" {
+  type      = string
+  sensitive = true
+  description = "Hashed password for Ubuntu user (generate with: mkpasswd -m sha-512)"
+}
+
 source "proxmox-iso" "ubuntu-harbor" {
   api_url      = var.proxmox_api_url
   username     = var.proxmox_username
@@ -33,7 +45,7 @@ source "proxmox-iso" "ubuntu-harbor" {
   memory       = 2048
   cores        = 2
   ssh_username = "ubuntu"
-  ssh_password = "ubuntu"                 # Change after cloud-init
+  ssh_password = var.ssh_password
   ssh_timeout  = "10m"
   network_adapters {
     model = "virtio"
@@ -47,7 +59,7 @@ users:
     sudo: ALL=(ALL) NOPASSWD:ALL
     shell: /bin/bash
     lock_passwd: false
-    passwd: $6$rounds=4096$mysalt$myhashedpassword
+    passwd: ${var.user_password_hash}
 EOF
 }
 

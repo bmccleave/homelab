@@ -1,0 +1,7 @@
+.terraform/
+.terraform.lock.hcl
+secrets.auto.tfvars
+nodes.auto.tfvars
+
+# Packer secrets
+secrets.pkrvars.hcl

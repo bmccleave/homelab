@@ -1,0 +1,24 @@
+# Example node configuration
+# Copy this file to nodes.auto.tfvars and customize with your network details
+
+nodes = {
+  # K0s Kubernetes cluster nodes
+  "k0s-node1" = { vmid = 201, ip = "10.0.0.201" }
+  "k0s-node2" = { vmid = 202, ip = "10.0.0.202" }
+  "k0s-node3" = { vmid = 203, ip = "10.0.0.203" }
+
+  # K3s Kubernetes cluster nodes
+  "k3s-node1" = { vmid = 211, ip = "10.0.0.211" }
+  "k3s-node2" = { vmid = 212, ip = "10.0.0.212" }
+  "k3s-node3" = { vmid = 213, ip = "10.0.0.213" }
+
+  # Docker Swarm cluster nodes
+  "swarm-node1" = { vmid = 221, ip = "10.0.0.221" }
+  "swarm-node2" = { vmid = 222, ip = "10.0.0.222" }
+  "swarm-node3" = { vmid = 223, ip = "10.0.0.223" }
+
+  # High Availability cluster nodes
+  "ha-node1" = { vmid = 231, ip = "10.0.0.231" }
+  "ha-node2" = { vmid = 232, ip = "10.0.0.232" }
+  "ha-node3" = { vmid = 233, ip = "10.0.0.233" }
+}
