@@ -99,7 +99,7 @@ resource "proxmox_vm_qemu" "k0s_node" {
   searchdomain  = "local"
   nameserver    = var.network_dns
   sshkeys = join("\n", var.ssh_public_keys)
-  ipconfig0     = "ip=$${each.value.ip}/$${var.network_cidr},gw=$${var.network_gateway}"
+  ipconfig0     = "ip=${each.value.ip}/${var.network_cidr},gw=${var.network_gateway}"
 
   # Wait for cloud-init to complete before running provisioners
   provisioner "remote-exec" {
