@@ -97,9 +97,9 @@ resource "proxmox_vm_qemu" "k0s_node" {
   ciuser        = var.vm_user
   cipassword    = var.vm_password
   searchdomain  = "local"
-  nameserver    = "192.168.1.1"  # Update this to your router/DNS server IP
+  nameserver    = var.network_dns
   sshkeys = join("\n", var.ssh_public_keys)
-  ipconfig0     = "ip=${each.value.ip}/24,gw=192.168.1.1"  # Update gateway to match your network
+  ipconfig0     = "ip=$${each.value.ip}/$${var.network_cidr},gw=$${var.network_gateway}"
 
   # Wait for cloud-init to complete before running provisioners
   provisioner "remote-exec" {

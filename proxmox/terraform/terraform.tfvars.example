@@ -3,6 +3,11 @@ proxmox_api_url = "https://10.0.0.100:8006/api2/json"
 proxmox_node = "proxmox"
 template_name = "ubuntu-24.04-template"
 
+# Network Configuration
+network_gateway = "10.0.0.1"
+network_dns = "10.0.0.1"
+network_cidr = "24"
+
 # Set to true to skip provisioners (useful for initial VM creation or troubleshooting)
 # After VMs are created and network is working, set to false to run provisioners
 skip_provisioners = true

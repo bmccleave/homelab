@@ -69,3 +69,21 @@ variable "nodes" {
   }))
   description = "Map of node names to their configuration (vmid and IP address)"
 }
+
+variable "network_gateway" {
+  type        = string
+  description = "Network gateway IP address"
+  default     = "192.168.1.1"
+}
+
+variable "network_dns" {
+  type        = string
+  description = "DNS server IP address"
+  default     = "192.168.1.1"
+}
+
+variable "network_cidr" {
+  type        = string
+  description = "Network CIDR (e.g., 24 for /24)"
+  default     = "24"
+}

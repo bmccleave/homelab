@@ -80,19 +80,22 @@ Before using these scripts, ensure you have:
    | `proxmox_api_url` | URL of the Proxmox API endpoint | `https://10.0.0.100:8006/api2/json` |
    | `proxmox_node` | Name of the Proxmox node to deploy VMs on | `proxmox1` |
    | `template_name` | Name of the cloud-init template to clone | `ubuntu-24.04-template` |
+   | `network_gateway` | Network gateway IP address | `10.0.0.1` |
+   | `network_dns` | DNS server IP address | `10.0.0.1` |
+   | `network_cidr` | Network CIDR notation (subnet mask) | `24` (for /24) |
    | `skip_provisioners` | Skip SSH provisioners (useful during initial setup) | `true` or `false` |
    | `create_snapshots` | Create clean snapshots after provisioning | `true` or `false` |
 
    **Configuration Steps**:
    - Edit `secrets.auto.tfvars` with your Proxmox API credentials and SSH keys
    - Edit `nodes.auto.tfvars` with your desired VM configuration (IDs and IP addresses)
-   - Update `terraform.tfvars` with your Proxmox server details and template name
+   - Update `terraform.tfvars` with your Proxmox server details, template name, and network configuration
    - Replace all example values with your actual configuration
 
 4. **Update Network Settings**:
 
    - Verify IP addresses in `nodes.auto.tfvars` match your network
-   - Update gateway and DNS server addresses in `terraform.tfvars` if needed
+   - Update `network_gateway`, `network_dns`, and `network_cidr` in `terraform.tfvars` to match your network
    - Ensure VM IDs don't conflict with existing VMs
 
 5. **Initialize and Apply**:
