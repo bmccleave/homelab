@@ -28,7 +28,7 @@ Complete Harbor registry deployment with automated TLS certificate management.
 Infrastructure-as-code for automated VM provisioning on Proxmox VE.
 
 **Features:**
-- Multi-cluster VM deployment (k0s, k3s, Docker Swarm)
+- Creation of N Ubuntu 24.04 LTS VMs
 - Cloud-init configuration
 - Automated guest agent and mDNS setup
 - API token authentication
